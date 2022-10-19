@@ -2,11 +2,14 @@
 title: "Need for Linear mixed effect model"
 author: "Chandan Pandey"
 date: "19/10/2022"
-output: powerpoint_presentation
+output:
+  beamer_presentation: default
+  powerpoint_presentation: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+options(digits = 3)
 ```
 
 # When do we need GLMM.
@@ -24,36 +27,151 @@ knitr::opts_chunk$set(echo = FALSE)
 
 # Simpson's Paradox
 
-Let us check from the live example from the simulated dataset. 
-```{r simpsons paradox,echo=FALSE}
-group1_x <- runif(100,1,10)
-group_2_x <- runif(100,5,15)
-group3_x <-runif(100,18,30)
-group1_y <- rnorm(100,10,2)*group1_x+150+rnorm(100,0,3)
-group2_y <- rnorm(100,10,2)*group_2_x+100+rnorm(100,0,3)
-group3_y <- rnorm(100,10,2)*group_2_x+50+rnorm(100,0,3)
+What is your intuition about relation between X and Y ?
+
+
+```{r simpsons paradox,echo=FALSE,warning=F,include=T}
+library(nlme)
+group1_x <- runif(100,10,30)
+group_2_x <- runif(100,20,40)
+group3_x <-runif(100,30,50)
+group1_y <- rnorm(100,5,1)*group1_x+rnorm(100,300,10)+rnorm(100,0,3)
+group2_y <- rnorm(100,5,1)*group_2_x+rnorm(100,200,10)+rnorm(100,0,3)
+group3_y <- rnorm(100,5,1)*group3_x+rnorm(100,100,10)+rnorm(100,0,3)
 group<-c(rep("A",100),rep("B",100),rep("C",100))
 simps_para<-data.frame(x=c(group1_x,group_2_x,group3_x),
                        y=c(group1_y,group2_y,group3_y),
                        group)
 simps_para$group<-factor(simps_para$group)
 plot(y~x,data = simps_para)
+mod_simple_lm <- lm(y~x,data = simps_para)
+library(dplyr)
+
 ```
 
-#load("C:/Users/chand/Documents/R-advance/Advance-R/data/dragons.RData")
-- Bullet 1
-- Bullet 2
-- Bullet 3
 
-# Slide with R Output
 
-```{r cars, echo = TRUE}
-summary(cars)
+# Let plot this model with simple linear model
+
+
+
+```{r simple lm, echo=F,warning=FALSE,fig.align='left'}
+
+mod_simple_lm <- lm(y~x,data = simps_para)
+summary1<-summary(mod_simple_lm)[4]%>%as.data.frame()
+names(summary1) <- c("Estimate","SE","t_value","P")
+print(summary1)
 ```
 
-## Slide with Plot
+# Let plot this model with simple linear model
 
-```{r pressure}
-plot(pressure)
+```{r simple model val, echo=F}
+##model validation
+par(mfrow=c(2,2))
+plot(mod_simple_lm)
 ```
 
+# Let plot this model with simple linear model
+
+```{r simple model plot,echo=FALSE}
+plot(y~x,data = simps_para)
+abline(mod_simple_lm,lwd=4)
+```
+
+# Now let me group these variable 
+
+## I have lied about dataset here a bit
+
+These value belongs to 3 groups. Think these groups as
+
+- Three different species
+- Three trials
+- Plots
+- communities
+- subspecies 
+- and many more
+
+__What will say on relation of x and Y ?__
+
+# Here is plot
+
+```{r plot with group, echo = F,fig.align='right',fig.dim=c(5,5)}
+plot(y~x,data = simps_para,col=group)
+```
+
+# One way to address this problem
+
+Model with two predictor but there is problem with that as well. We will discuss this latter but first model with two predictor. 
+
+```{r two predictor, echo=F}
+mod_simple_2 <- lm(y~x+group,data = simps_para)
+summary.aov(mod_simple_2)%>%print()
+mod_simple_2$coefficients
+```
+
+# Model validation
+
+```{r simple 2 pred mod val, echo=F}
+par(mfrow=c(2,2))
+plot(mod_simple_2)
+```
+
+# Models performance
+
+Let us compare the two models. 
+
+```{r compare the model,echo=FALSE}
+## AIC value 
+library(AICcmodavg)
+aictab(cand.set = list(mod_simple_lm,mod_simple_2),modnames = c("Single","grouped"))
+# R squared value
+R_1 <- summary(mod_simple_lm)[9]
+R_2 <- summary(mod_simple_2)[9]
+data.frame(model = c("Single","grouped"),R_squared= c(R_1[[1]],R_2[[1]]))%>%print()
+```
+
+Model with two predictor have improved the model but what is the trend
+
+# Plot the trend with two predictors
+
+```{r plot with two trend, echo=F,fig.dim=c(3,1.5)}
+library(ggplot2)
+ggiraphExtra::ggPredict(mod_simple_2,se=TRUE,interactive=F)
+```
+
+Q: 
+
+* What is the correct trend ?
+* What was real question this case ? can we generalized this model.
+
+# What is the answer
+
+## Linear Mixed effect model 
+
+# Let model with LMM (1)
+
+```{r LMM, echo=T,warning=F,fig.dim=c(3,2)}
+mod_LM <- lme(y~x, random =~1|group,
+              data = simps_para,method = "REML")
+plot(mod_LM)
+```
+
+# Let model with LMM (2)
+```{r qq plot lme,echo=FALSE}
+qqnorm(mod_LM)
+```
+
+# Model summary
+
+```{r summary,echo=FALSE}
+summary(mod_LM)
+```
+
+# Ploting the model 
+
+```{r ploting LM,echo=TRUE,fig.dim=c(4,2.5)}
+plot(y~x,data=simps_para)
+abline(a=mod_LM$coefficients$fixed[1],
+       b=mod_LM$coefficients$fixed[2],
+       col="red",lwd=5)
+```
