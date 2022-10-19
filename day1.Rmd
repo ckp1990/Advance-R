@@ -1,0 +1,42 @@
+---
+title: "Need for Linear mixed effect model"
+author: "Chandan Pandey"
+date: "19/10/2022"
+output: powerpoint_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# When do we need GLMM.
+
+- Some data are very messy and complex. 
+- eg., effect of $N_{2}$ on grass growth; Many factor can influence
+  - Species difference. 
+  - Local Area variable. 
+  - Species composition. 
+  - Other Nutrient factors. 
+  - And many many more. 
+- Impossible to account for all the predictors.
+
+
+
+# Slide with Bullets
+load("C:/Users/chand/Documents/R-advance/Advance-R/data/dragons.RData")
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+# Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
