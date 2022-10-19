@@ -22,8 +22,25 @@ knitr::opts_chunk$set(echo = FALSE)
 
 
 
-# Slide with Bullets
-load("C:/Users/chand/Documents/R-advance/Advance-R/data/dragons.RData")
+# Simpson's Paradox
+
+Let us check from the live example from the simulated dataset. 
+```{r simpsons paradox,echo=FALSE}
+group1_x <- runif(100,1,10)
+group_2_x <- runif(100,5,15)
+group3_x <-runif(100,18,30)
+group1_y <- rnorm(100,10,2)*group1_x+150+rnorm(100,0,3)
+group2_y <- rnorm(100,10,2)*group_2_x+100+rnorm(100,0,3)
+group3_y <- rnorm(100,10,2)*group_2_x+50+rnorm(100,0,3)
+group<-c(rep("A",100),rep("B",100),rep("C",100))
+simps_para<-data.frame(x=c(group1_x,group_2_x,group3_x),
+                       y=c(group1_y,group2_y,group3_y),
+                       group)
+simps_para$group<-factor(simps_para$group)
+plot(y~x,data = simps_para)
+```
+
+#load("C:/Users/chand/Documents/R-advance/Advance-R/data/dragons.RData")
 - Bullet 1
 - Bullet 2
 - Bullet 3
