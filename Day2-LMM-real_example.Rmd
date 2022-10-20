@@ -1,0 +1,84 @@
+---
+title: "Linear Mixed effect model-day2"
+author: "Chandan Kumar Pandey"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+require(ggplot2)
+require(GGally)
+require(reshape2)
+require(lme4)
+require(compiler)
+require(parallel)
+require(boot)
+require(lattice)
+library(dplyr)
+```
+
+# Mixed effect models
+
+
+
+# possun Morphometic dataset. 
+
+```{r load the data,echo=TRUE}
+possum <- read.csv("./data/possum.csv",header = T)
+## Basic data data exploration 
+summary(possum)
+## convert the population,site and gender  into factors
+possum$site <-as.factor(possum$site)
+possum$sex <- as.factor(possum$sex)
+possum$Pop <-as.factor(possum$Pop)
+summary(possum)
+## you can see the difference in the way population,site and gender columns
+## box plot of lenght vs gender and pop 
+boxplot(totlngth~sex+Pop, data = possum)
+## pair plot to see if there is co - linearity
+ggpairs(possum[,c(8,7,9,10)])
+# 
+```
+
+# Droping the co-linear variable. 
+
+There is small amount of correlation between tail and skull, foot len vs skull. However, since we want to know of skull width can predict the possum length. 
+
+```{r droping the predictor, echo=T}
+#scatter plot
+scat_plot <- ggplot(data = possum, aes(x=skullw,y=totlngth,col=sex))
+scat_plot + geom_point()+facet_wrap(.~Pop+site)
+```
+
+* What you take out of this graphs on the population trend of the possum
+
+# Let fit simple linear model
+
+$$Lenght = \alpha + \beta_{1}* Skull width+ \epsilon $$
+Where $$\epsilon \sim N(0,\sigma^{2})$$
+
+```{r pressure, echo=T}
+mod_lm <- lm(totlngth~skullw,data = possum)
+summary(mod_lm)
+par(mfrow=c(2,2))
+plot(mod_lm)
+```
+
+The data seems to be heterogeneous due to fact from the first graph
+
+Let take population as random effect 
+
+```{r pop as random effect, echo=TRUE}
+model_LMM <- lmer(totlngth~skullw + (1|Pop:site),data = possum)
+plot(model_LMM)
+## clearly intercet are different. 
+dotplot(ranef(model_LMM, which = "Pop", condVar = TRUE))
+## let us see the model
+print(model_LMM, corr = FALSE)
+## ##getting SE and tabular format for fixed effect.
+se <- sqrt(diag(vcov(model_LMM)))
+# table of estimates with 95% CI
+(tab <- cbind(Est = fixef(model_LMM), 
+              LL = fixef(model_LMM) - 1.96 * se,
+              UL = fixef(model_LMM) + 1.96 *se))
+```
