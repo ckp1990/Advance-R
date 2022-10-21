@@ -7,7 +7,10 @@ output: pdf_document
 
 ```{r setup, include=FALSE,echo=FALSE}
 require(ggplot2)
+library(ggiraph)
+require(ggiraphExtra)
 require(GGally)
+require(ggExtra)
 require(reshape2)
 require(lme4)
 require(compiler)
@@ -34,7 +37,8 @@ possum$Pop <-as.factor(possum$Pop)
 summary(possum)
 ## you can see the difference in the way population,site and gender columns
 ## box plot of lenght vs gender and pop 
-boxplot(totlngth~sex+Pop, data = possum)
+boxplot(totlngth~Pop, data = possum)
+boxplot(totlngth~site, data = possum)
 ## pair plot to see if there is co - linearity
 ggpairs(possum[,c(8,7,9,10)])
 # 
@@ -44,11 +48,6 @@ ggpairs(possum[,c(8,7,9,10)])
 
 There is small amount of correlation between tail and skull, foot len vs skull. However, since we want to know of skull width can predict the possum length. 
 
-```{r droping the predictor, echo=T}
-#scatter plot
-scat_plot <- ggplot(data = possum, aes(x=skullw,y=totlngth,col=sex))
-scat_plot + geom_point()+facet_wrap(.~Pop+site)
-```
 
 * What you take out of this graphs on the population trend of the possum
 
@@ -58,21 +57,104 @@ $$Lenght = \alpha + \beta_{1}* Skull width+ \epsilon $$
 Where $$\epsilon \sim N(0,\sigma^{2})$$
 
 ```{r pressure, echo=T}
-mod_lm <- lm(totlngth~skullw,data = possum)
+mod_lm <- glm(totlngth~skullw,data = possum,family = "gaussian")
 summary(mod_lm)
 par(mfrow=c(2,2))
 plot(mod_lm)
+ggPredict(mod_lm,se = T,interactive = F)+labs(x="Skull Width", y= "Body Length")
+```
+Clearly there the data is not homogeneous,
+
+* We need to transform the variable to see if we can get out model to work
+
+## New model will be 
+
+$$\log(Length) = \alpha + \beta_{1}* \log(Skull width)+ \epsilon $$
+
+```{r log lenght, echo=T}
+possum <- possum%>%mutate(log_skullwid=log(skullw))
+possum <- possum%>%mutate(log_len=log(totlngth))
+mod_lm_log <- glm(log_len~log_skullwid,data = possum,family = "gaussian")
+par(mfrow=c(2,2))
+plot(mod_lm_log)
+ggPredict(mod_lm_log,se = T,interactive = F)+labs(x="Skull Width (log)", y= "Body Length (log)")
 ```
 
-The data seems to be heterogeneous due to fact from the first graph
+What is the assumption we are violating here for linear model of Gaussian Family ?
 
-Let take population as random effect 
+* Homoscedasticity: The variance of residual is the same for any value of X.
+* what about "Independence: Observations are independent of each other."
+
+Let us check
+
+```{r independence check,echo=TRUE}
+ggplot(possum, aes(x = site, y = skullw)) +
+  geom_jitter(alpha = .1) +
+  geom_violin(alpha = 0.7,aes(fill=Pop),draw_quantiles = c(0.25, 0.5, 0.75)) +
+  ggtitle("Violin plot of Skull Width vs Site")
+  
+#scatter plot
+scat_plot <- ggplot(data = possum, aes(x=skullw,y=totlngth))
+scat_plot + geom_point()+facet_wrap(.~Pop+site)  
+```
+
+* __the data is not independent__
+
+
+As we can clearly see from the data collected the data is not independent but nested in the nature. 
+
+Moreover, the data is taken from 2 different population. In addition there are several site nested for each population. 
+
+This is called nested data. 
+
+## One traditional way (wrong way)
+
+Let make model of all the site individually. 
+
+```{r model with each site,echo=TRUE}
+site<-unique(possum$site)
+Beta <- vector(length = length(site))
+alpha <- vector(length = length(site))
+for(k in 1:length(Beta)){
+  flag_mod <- lm(totlngth~skullw,data = possum[possum$site==site[k],])
+  alpha[k] <- as.numeric(flag_mod$coefficients[[1]])
+  Beta[k] <- as.numeric(flag_mod$coefficients[[2]])
+}
+##let plot regression for each site. 
+ggplot(possum,aes(x=skullw,y=totlngth))+geom_blank()+
+  geom_abline(slope = Beta[1],intercept = alpha[1],col="red")+
+  geom_abline(slope = Beta[2],intercept = alpha[2],col="black")+
+  geom_abline(slope = Beta[3],intercept = alpha[3],col="darkgreen")+
+  geom_abline(slope = Beta[4],intercept = alpha[4],col="khaki4")+
+  geom_abline(slope = Beta[5],intercept = alpha[5],col="orange")+
+  geom_abline(slope = Beta[6],intercept = alpha[6],col="blue")+
+  geom_abline(slope = Beta[7],intercept = alpha[7],col="purple")
+```
+# Less traditional way (method in this case)
+
+It to account for variation in site. 
+
+```{r account for variation, echo=T}
+mod_account_site <- lm(totlngth~skullw + site ,data = possum)
+AIC(mod_account_site,mod_lm)
+#AIC value have decrease but What is interpretation of this model ?
+pred_value <- as.data.frame(predict(mod_account_site,possum,se.fit = T))
+pred_value <- cbind(pred_value,possum)
+ggplot(data = pred_value,aes(x=skullw,y=totlngth))+
+  geom_point(aes(col=site))+
+  geom_line(aes(x=skullw,y = fit,group=site))
+```
+Now it is clear that for some random reason the behavior of data is dependent on site.
+
+# How to solve such problem
+
+* One problem in using model $y = \alpha + \beta*X1 + \beta*X2$ is 
 
 ```{r pop as random effect, echo=TRUE}
-model_LMM <- lmer(totlngth~skullw + (1|Pop:site),data = possum)
+model_LMM <- lmer(totlngth ~ skullw + 1 | (Pop:site),data = possum)
 plot(model_LMM)
 ## clearly intercet are different. 
-dotplot(ranef(model_LMM, which = "Pop", condVar = TRUE))
+dotplot(ranef(model_LMM, which = "Pop|site", condVar = TRUE))
 ## let us see the model
 print(model_LMM, corr = FALSE)
 ## ##getting SE and tabular format for fixed effect.
