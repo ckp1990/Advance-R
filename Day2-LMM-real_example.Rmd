@@ -96,6 +96,8 @@ ggplot(possum, aes(x = site, y = skullw)) +
 #scatter plot
 scat_plot <- ggplot(data = possum, aes(x=skullw,y=totlngth))
 scat_plot + geom_point()+facet_wrap(.~Pop+site)  
+# sample size
+group_by(possum,site)%>%summarise(count=n())
 ```
 
 * __the data is not independent__
@@ -151,7 +153,7 @@ Now it is clear that for some random reason the behavior of data is dependent on
 * One problem in using model $y = \alpha + \beta*X1 + \beta*X2$ is 
 
 ```{r pop as random effect, echo=TRUE}
-model_LMM <- lmer(totlngth ~ skullw + 1 | (Pop:site),data = possum)
+model_LMM <- lmer(totlngth ~ skullw + 1| (Pop:site),data = possum)
 plot(model_LMM)
 ## clearly intercet are different. 
 dotplot(ranef(model_LMM, which = "Pop|site", condVar = TRUE))
@@ -163,4 +165,8 @@ se <- sqrt(diag(vcov(model_LMM)))
 (tab <- cbind(Est = fixef(model_LMM), 
               LL = fixef(model_LMM) - 1.96 * se,
               UL = fixef(model_LMM) + 1.96 *se))
+plot(model_LMM, Pop:site~ resid(.), abline = 0 )
+plot(model_LMM, resid(., type = "pearson") ~ fitted(.) |Pop:site, id = 0.05, 
+     adj = -0.3, pch = 20, col = "gray40")
+leveneTest(possum$skullw, possum$site, center = mean)
 ```
