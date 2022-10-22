@@ -13,11 +13,8 @@ require(GGally)
 require(ggExtra)
 require(reshape2)
 require(lme4)
-require(compiler)
-require(parallel)
-require(boot)
-require(lattice)
 library(dplyr)
+library(ggeffects)
 ```
 
 # Mixed effect models
@@ -153,20 +150,23 @@ Now it is clear that for some random reason the behavior of data is dependent on
 * One problem in using model $y = \alpha + \beta*X1 + \beta*X2$ is 
 
 ```{r pop as random effect, echo=TRUE}
-model_LMM <- lmer(totlngth ~ skullw + 1| (Pop:site),data = possum)
-plot(model_LMM)
-## clearly intercet are different. 
-dotplot(ranef(model_LMM, which = "Pop|site", condVar = TRUE))
-## let us see the model
-print(model_LMM, corr = FALSE)
+
+model_LMM <- lmer(totlngth ~ skullw + (1|site) ,data = possum[is.na(possum$age)==F,])
+summary(model_LMM)
 ## ##getting SE and tabular format for fixed effect.
-se <- sqrt(diag(vcov(model_LMM)))
-# table of estimates with 95% CI
-(tab <- cbind(Est = fixef(model_LMM), 
-              LL = fixef(model_LMM) - 1.96 * se,
-              UL = fixef(model_LMM) + 1.96 *se))
-plot(model_LMM, Pop:site~ resid(.), abline = 0 )
-plot(model_LMM, resid(., type = "pearson") ~ fitted(.) |Pop:site, id = 0.05, 
+plot(model_LMM,site~ resid(.), abline = 0 )
+plot(model_LMM, resid(., type = "pearson") ~ fitted(.) |site, id = 0.05, 
      adj = -0.3, pch = 20, col = "gray40")
-leveneTest(possum$skullw, possum$site, center = mean)
+pred <- ggpredict(model_LMM,terms = "skullw")
+ggplot(pred) + 
+   geom_line(aes(x = x, y = predicted)) +          # slope
+   geom_ribbon(aes(x = x, ymin = predicted - std.error, ymax = predicted + std.error), 
+               fill = "lightgrey", alpha = 0.5) +  # error band
+   geom_point(data = possum,                      # adding the raw data (scaled values)
+              aes(x = skullw, y = totlngth, colour = site)) + 
+   labs(x = "Skull width", y = "Total length", 
+        title = "Morphometric relation between skull width and body length") + 
+   theme_minimal()+geom_abline(slope = 0.72,intercept = 45.63,col="blue")
+
 ```
+
