@@ -1,0 +1,86 @@
+---
+title: "LMM with non normal distribution"
+author: "Chandan Kumar Pandey"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE,echo=FALSE}
+require(ggplot2)
+library(ggiraph)
+require(ggiraphExtra)
+require(GGally)
+require(ggExtra)
+require(reshape2)
+require(lme4)
+library(dplyr)
+library(ggeffects)
+library(AED) ## Koalas data
+```
+
+# spatial distribution
+
+```{r load data, echo=TRUE}
+Animals <- data(koalas)
+```
+
+## explaining data
+
+Var name | Detail
+---------|-------
+pprim ssite |  Percentage of Primary trees in each sub-site 
+pprim ssite |  Percentage of Secondary trees in each sub-site
+phss 1km | Percentage of the landscape within  1km  respectively, of each subsite that is highly suitable 
+phss 2.5km | Percentage of the landscape within 2.5 KM , respectively, of each subsite that is highly suitable 
+phss 5km | Percentage of the landscape within  5km, respectively, of each subsite that is highly suitable 
+pm 1km | Percentage of the landscape within  1 KM  respectively, of each subsite that is marginal suitable 
+pm 2.5km | Percentage of the landscape within  2.5 KM  respectively, of each subsite that is marginal suitable 
+pm 5km | Percentage of the landscape within  5 KM  respectively, of each subsite that is marginal suitable 
+pdens 1km | Density (patches/100 ha) of habitat at 1 KM
+pdens 2.5km |Density (patches/100 ha) of habitat at 2.5 Km
+pdens 5km | Density (patches/100 ha) of habitat
+edens 1km | Density (m/ha) of habitat patch edges
+edens 2.5km | Density (m/ha) of habitat patch edges
+edens 5km | Density (m/ha) of habitat patch edges
+rdens 1km | Density (m/ha) of paved roads 
+rdens 2.5km | Density (m/ha) of paved roads 
+rdens 5km | Density (m/ha) of paved roads 
+
+# Data expolaration and discriptive
+
+The can be two major issue
+
+1. Col linearity and/or
+2. Spatial auto correlation. 
+
+## Collinear check 
+
+
+```{r coll,echo=T}
+cor(Koalas[,6:22],method = "spearman")
+```
+
+We can see that similar variable at different distance are show co-linear behavior.This suggest that our data is spatial nested. 
+
+![]("D:\Online course work\Basic-R-course\Advance_R\Advance-R\imp_image\nested_spatial.gif")
+
+d
+
+ 
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+

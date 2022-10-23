@@ -136,6 +136,8 @@ It to account for variation in site.
 ```{r account for variation, echo=T}
 mod_account_site <- lm(totlngth~skullw + site ,data = possum)
 AIC(mod_account_site,mod_lm)
+summary(mod_account_site)
+plot(mod_account_site)
 #AIC value have decrease but What is interpretation of this model ?
 pred_value <- as.data.frame(predict(mod_account_site,possum,se.fit = T))
 pred_value <- cbind(pred_value,possum)
@@ -166,7 +168,7 @@ ggplot(pred) +
               aes(x = skullw, y = totlngth, colour = site)) + 
    labs(x = "Skull width", y = "Total length", 
         title = "Morphometric relation between skull width and body length") + 
-   theme_minimal()+geom_abline(slope = 0.72,intercept = 45.63,col="blue")
+   theme_minimal()
 
 ```
 
