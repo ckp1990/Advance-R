@@ -1,0 +1,91 @@
+---
+title: "Multivariate"
+author: "Chandan Kumar Pandey"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(devtools)
+#install_github("vqv/ggbiplot") to install gg biplot
+```
+
+
+# Data 
+
+```{r data, echo=TRUE}
+Turtle_data <- read.csv("data/Morphometric  freshwater turtles in  Texas.csv")
+str(Turtle_data)
+PCA_dataset <- Turtle_data[,8:12]
+PCA_dataset <- PCA_dataset%>%mutate(index = 1:nrow(PCA_dataset))
+PCA_dataset <- na.omit(PCA_dataset)
+cor(PCA_dataset[,-7])
+plot(Turtle_data[,c(4,8,9,10,11,12)])
+ggpairs(PCA_dataset[,-6])
+## PCA analysis
+Turtle_PCA <- prcomp(PCA_dataset[,-6],scale=T)
+plot(Turtle_PCA, type="l")
+biplot(Turtle_PCA,scale = 0)
+abline(a=0,b=0,lty=2)
+abline(v = 0)
+summary(Turtle_PCA)
+Turtle_PCA
+PCA_dataset <-cbind(PCA_dataset,Turtle_PCA$x[,1:2])
+PCA_dataset <- cbind(Turtle_data[PCA_dataset$index,][,1:7],PCA_dataset)
+```
+
+
+
+Let plot the PCA data
+
+```{r ploting, echo=T}
+ggplot(data = PCA_dataset,aes(x=PC1,y=PC2,col=Genus,fill=Genus))+
+  stat_ellipse(geom = "polygon",col="black",alpha=0.5)+
+  geom_point(shape=21,col="black")+
+  labs(x="PCA-1(~93% variation)",y="PCA-2(~6% variation)")+
+  theme_classic()
+
+```
+
+# Cluster analysis. 
+
+```{r k-cluster,echo=TRUE}
+cluster_data <- PCA_dataset[,8:12]
+## col 14 in PCA dataset is index. 
+cluster_data <- scale(cluster_data)
+summary(cluster_data)
+klu <- list()
+for(i in 1:10){
+  klu[[i]] <- kmeans(cluster_data,i)
+}
+ss_value <- list()
+for(j in 1:length(klu)){
+  ss_value [[j]]<-(klu[[j]]$betweenss/klu[[j]]$totss)*100
+}
+plot(x=1:length(ss_value),y=ss_value,type = "b",xlab = "number of cluster",
+     ylab = "between_SS / total_SS")
+plot(PCA_dataset$C..Length,PCA_dataset$C..Width,col=klu[[6]]$cluster)
+```
+
+# hiarchiel cluster analysis, 
+
+```{r hclust,echo=TRUE}
+hklu <- dist(cluster_data)
+fit_hklu <- hclust(hklu,method = "ward.D2")
+plot(fit_hklu,cex=0.2)
+sub_group <- cutree(fit_hklu,2)
+table(sub_group)
+plot(fit_hklu,cex=0.2)
+rect.hclust(fit_hklu,k = 6,border = "red")
+ ##model based cluster
+library(mclust)
+fit_mclust  <- Mclust(cluster_data)
+fit_mclust
+plot(fit_mclust)
+plot(fit_mclust)
+plot(PCA_dataset$PC1,PCA_dataset$PC2,col=fit_mclust$classification)
+```
